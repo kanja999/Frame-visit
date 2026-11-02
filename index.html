@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ambil Frame Video</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c4501b">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--text:#1d1d1b;--muted:#6b6a66;--accent:#c4501b;--accent-t:#fff;--line:#e2e0da;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#232321;--text:#f0eee8;--muted:#9c9a93;--accent:#e8774a;--accent-t:#1a1a18;--line:#363633}}
+:root[data-theme="dark"]{--bg:#171716;--card:#232321;--text:#f0eee8;--muted:#9c9a93;--accent:#e8774a;--accent-t:#1a1a18;--line:#363633}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.4rem;margin:0 0 4px}
+p.sub{margin:0 0 16px;color:var(--muted);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+video,canvas,img{display:block;max-width:100%;width:100%;height:auto;border-radius:8px;background:#000}
+label.pick{display:block;text-align:center;padding:28px 12px;border:2px dashed var(--line);border-radius:12px;cursor:pointer;color:var(--muted)}
+label.pick b{color:var(--text)}
+input[type=file]{display:none}
+input[type=range]{width:100%;accent-color:var(--accent);margin:12px 0 4px}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.time{font-variant-numeric:tabular-nums;font-size:.95rem}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+button.main{background:var(--accent);color:var(--accent-t);border-color:var(--accent);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btns button{flex:1 1 auto}
+.hint{color:var(--muted);font-size:.85rem;margin-top:8px}
+.chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.95rem}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.tgrid{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr 1fr 1fr;gap:6px;margin-top:10px}
+.tgrid label{font-size:.72rem;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.tgrid input{width:100%;font:inherit;font-size:.95rem;padding:8px 2px;text-align:center;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+textarea{width:100%;height:110px;margin-top:10px;font:.72rem/1.3 ui-monospace,Menlo,Consolas,monospace;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);resize:vertical;word-break:break-all}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>Ambil Frame Video</h1>
+<p class="sub">Video dan foto diproses di perangkatmu dan tidak diunggah ke mana pun.</p>
+
+<div class="card" id="pickCard">
+<label class="pick"><input type="file" id="file" accept="video/*,image/*"><b>Pilih video atau foto</b><br>dari perangkat</label>
+</div>
+
+<div class="card" id="player" hidden>
+<video id="vid" playsinline muted preload="auto"></video>
+<img id="photo" alt="Foto" hidden>
+<input type="range" id="seek" min="0" max="1" step="0.001" value="0">
+<div class="row"><span class="time" id="tcur">0:00.000</span><span class="time" id="tdur">0:00.000</span></div>
+<div class="btns">
+<button id="m1">−1 frame</button><button id="p1">+1 frame</button>
+</div>
+<label class="chk"><input type="checkbox" id="ts" checked> Tambahkan time stamp (dd/mm/yyyy, jam:menit:detik)</label>
+<div class="chk">Waktu: <select id="tmode" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)"><option value="auto">Otomatis (waktu perangkat)</option><option value="manual">Manual</option></select></div>
+<div id="tman" hidden>
+<div class="tgrid">
+<label>Tgl<input type="number" inputmode="numeric" id="td" min="1" max="31"></label>
+<label>Bln<input type="number" inputmode="numeric" id="tm" min="1" max="12"></label>
+<label>Tahun<input type="number" inputmode="numeric" id="ty" min="1900" max="9999"></label>
+<label>Jam<input type="number" inputmode="numeric" id="th" min="0" max="23"></label>
+<label>Menit<input type="number" inputmode="numeric" id="tn" min="0" max="59"></label>
+<label>Detik<input type="number" inputmode="numeric" id="tsc" min="0" max="59"></label>
+</div>
+<div class="btns"><button id="tnow">Pakai waktu sekarang</button></div>
+</div>
+<div class="chk">Penyesuaian: <select id="fit" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)"><option value="cover">Isi penuh (potong tepi)</option><option value="contain">Muat utuh (pita hitam)</option></select></div>
+<div class="chk">Posisi: <select id="pos" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)"><option value="c">Tengah</option><option value="tl">Kiri atas</option><option value="tr">Kanan atas</option><option value="bl">Kiri bawah</option><option value="br">Kanan bawah</option></select></div>
+<div class="btns"><button class="main" id="grab">Ambil frame ini</button></div>
+<div class="btns"><button id="change">Ganti file</button></div>
+</div>
+
+<div class="card" id="result" hidden>
+<canvas id="cv"></canvas>
+<div class="row" style="margin-top:12px"><span class="time" id="info"></span></div>
+<div class="btns"><button class="main" id="save">Simpan JPEG</button></div>
+<label class="chk"><input type="checkbox" id="pre" checked> Sertakan awalan data:image/jpeg;base64,</label>
+<textarea id="b64" readonly spellcheck="false" placeholder="Base64 muncul di sini setelah gambar diproses"></textarea>
+<div class="row"><span class="hint" id="b64info"></span></div>
+<div class="btns"><button id="copy">Salin base64</button><button id="share">Bagikan</button></div>
+<p class="hint" id="msg"></p>
+<img id="img" alt="Hasil frame" hidden>
+</div>
+</main>
+
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var vid=$('vid'),seek=$('seek'),cv=$('cv'),fileIn=$('file');
+var url=null,name='video',fps=30,shotTime=0,blob=null,isPhoto=false,photo=$('photo');
+
+function fmt(t){var m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(3)}
+
+function setMode(){vid.hidden=isPhoto;photo.hidden=!isPhoto;[seek,$('tcur').parentNode,$('m1').parentNode].forEach(function(e){e.hidden=isPhoto});$('grab').textContent=isPhoto?'Proses foto':'Ambil frame ini'}
+photo.addEventListener('load',function(){if(!isPhoto)return;$('pickCard').hidden=true;$('player').hidden=false});
+photo.addEventListener('error',function(){if(isPhoto)alert('Foto tidak bisa dibuka di browser ini. Coba format JPG atau PNG.')});
+fileIn.addEventListener('change',function(){
+  var f=fileIn.files&&fileIn.files[0];if(!f)return;
+  if(url)URL.revokeObjectURL(url);
+  url=URL.createObjectURL(f);name=f.name.replace(/\.[^.]+$/,'')||'video';
+  $('result').hidden=true;
+  isPhoto=/^image\//.test(f.type);
+  setMode();
+  if(isPhoto){vid.removeAttribute('src');vid.load();photo.src=url}
+  else{photo.removeAttribute('src');vid.src=url}
+});
+vid.addEventListener('loadedmetadata',function(){
+  seek.max=vid.duration;seek.value=0;
+  $('tdur').textContent=fmt(vid.duration);$('tcur').textContent=fmt(0);
+  $('pickCard').hidden=true;$('player').hidden=false;
+  vid.currentTime=0.001;
+});
+vid.addEventListener('error',function(){if(isPhoto)return;alert('Video tidak bisa dibuka di browser ini. Coba format MP4 atau WebM.')});
+seek.addEventListener('input',function(){vid.currentTime=parseFloat(seek.value)});
+vid.addEventListener('timeupdate',function(){seek.value=vid.currentTime;$('tcur').textContent=fmt(vid.currentTime)});
+function step(d){vid.pause();vid.currentTime=Math.min(Math.max(0,vid.currentTime+d/fps),vid.duration)}
+$('m1').onclick=function(){step(-1)};
+$('p1').onclick=function(){step(1)};
+$('change').onclick=function(){$('player').hidden=true;$('result').hidden=true;$('pickCard').hidden=false;fileIn.value=''};
+
+// perkiraan fps lewat requestVideoFrameCallback bila tersedia
+if('requestVideoFrameCallback' in HTMLVideoElement.prototype){
+  vid.addEventListener('play',function(){
+    var last=null,n=0,sum=0;
+    function cb(now,meta){
+      if(last!==null&&meta.mediaTime>last){var d=meta.mediaTime-last;if(d>0.005&&d<0.2){sum+=d;n++}}
+      last=meta.mediaTime;
+      if(n<20&&!vid.paused)vid.requestVideoFrameCallback(cb);
+      else if(n>=5)fps=Math.round(n/sum);
+    }
+    vid.requestVideoFrameCallback(cb);
+  });
+}
+
+var dataUrl='';
+function pad(n,l){n=String(n);while(n.length<(l||2))n='0'+n;return n}
+function fillNow(){var d=new Date();$('td').value=d.getDate();$('tm').value=d.getMonth()+1;$('ty').value=d.getFullYear();$('th').value=d.getHours();$('tn').value=d.getMinutes();$('tsc').value=d.getSeconds()}
+function cl(id,lo,hi){var v=parseInt($(id).value,10);if(isNaN(v))v=lo;return Math.min(hi,Math.max(lo,v))}
+function stampText(){
+  var y,mo,da,h,mi,s,d;
+  if($('tmode').value==='manual'){
+    y=cl('ty',1900,9999);mo=cl('tm',1,12);da=cl('td',1,new Date(y,mo,0).getDate());
+    h=cl('th',0,23);mi=cl('tn',0,59);s=cl('tsc',0,59);
+  }else{d=new Date();y=d.getFullYear();mo=d.getMonth()+1;da=d.getDate();h=d.getHours();mi=d.getMinutes();s=d.getSeconds()}
+  return pad(da)+'/'+pad(mo)+'/'+pad(y,4)+', '+pad(h)+':'+pad(mi)+':'+pad(s);
+}
+$('tmode').addEventListener('change',function(){$('tman').hidden=this.value!=='manual'});
+$('tnow').onclick=fillNow;fillNow();
+function b64Text(){return $('pre').checked?dataUrl:dataUrl.replace(/^data:[^,]*,/,'')}
+function showB64(){var t=b64Text();$('b64').value=t;$('b64info').textContent=t.length.toLocaleString('id-ID')+' karakter'}
+$('pre').addEventListener('change',showB64);
+$('b64').addEventListener('focus',function(){this.select()});
+$('copy').onclick=async function(){
+  var t=b64Text();if(!t)return;
+  try{await navigator.clipboard.writeText(t);$('msg').textContent='Base64 disalin.';return}catch(e){}
+  var ta=$('b64'),ok=false;ta.focus();ta.select();
+  try{ok=document.execCommand('copy')}catch(e){}
+  $('msg').textContent=ok?'Base64 disalin.':'Gagal menyalin otomatis. Teks sudah terpilih, salin secara manual.';
+};
+$('share').onclick=async function(){
+  var t=b64Text();if(!t)return;
+  if(!navigator.share){$('msg').textContent='Fitur bagikan tidak didukung di browser ini. Gunakan tombol Salin.';return}
+  try{await navigator.share({title:name,text:t});return}catch(e){if(e&&e.name==='AbortError')return}
+  try{
+    var fl=new File([t],name+'_base64.txt',{type:'text/plain'});
+    if(navigator.canShare&&navigator.canShare({files:[fl]})){await navigator.share({files:[fl]});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  $('msg').textContent='Gagal membagikan. Gunakan tombol Salin.';
+};
+$('grab').onclick=function(){
+  vid.pause();
+  cv.width=640;cv.height=852;
+  var cx=cv.getContext('2d'),src=isPhoto?photo:vid,vw=isPhoto?photo.naturalWidth:vid.videoWidth,vh=isPhoto?photo.naturalHeight:vid.videoHeight;
+  var sc=Math[$('fit').value==='cover'?'max':'min'](640/vw,852/vh),dw=vw*sc,dh=vh*sc;
+  cx.fillStyle='#000';cx.fillRect(0,0,640,852);
+  cx.drawImage(src,(640-dw)/2,(852-dh)/2,dw,dh);
+  if($('ts').checked){
+    var txt=stampText();
+    var fs=18/0.716;cx.font=fs+'px Arial, sans-serif';
+    var sx=236/cx.measureText(txt).width;
+    var pos=$('pos').value,bx=202,by=415,mg=8;
+    if(pos==='tl'){bx=mg;by=mg}else if(pos==='tr'){bx=640-236-mg;by=mg}else if(pos==='bl'){bx=mg;by=852-22-mg}else if(pos==='br'){bx=640-236-mg;by=852-22-mg}
+    cx.fillStyle='rgba(0,0,0,0.5)';cx.fillRect(bx,by,236,22);
+    cx.fillStyle='#fff';cx.textAlign='center';cx.textBaseline='alphabetic';
+    cx.save();cx.translate(bx+118,by+18);cx.scale(sx,1);cx.fillText(txt,0,0);cx.restore();
+  }
+  shotTime=vid.currentTime;
+  $('info').textContent=isPhoto?'640×852 px, foto':'640×852 px, pada '+fmt(shotTime);
+  $('msg').textContent='';$('img').hidden=true;
+  cv.toBlob(function(b){
+    blob=b;var fr=new FileReader();fr.onload=function(){dataUrl=fr.result;showB64()};fr.readAsDataURL(b);$('result').hidden=false;
+    $('result').scrollIntoView({behavior:'smooth',block:'nearest'});
+  },'image/jpeg',0.95);
+};
+
+$('save').onclick=function(){
+  if(!blob)return;
+  var fn=isPhoto?name+'_foto.jpg':name+'_'+shotTime.toFixed(3).replace('.','-')+'s.jpg';
+  var u=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(u)},4000);
+  $('msg').textContent='Mengunduh '+fn+'. Jika tidak terunduh (iPhone), tekan lama gambar di bawah lalu simpan.';
+  var u2=URL.createObjectURL(blob);$('img').src=u2;$('img').hidden=false;
+};
+if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){navigator.serviceWorker.register('sw.js').catch(function(){})}
+})();
+</script>
+</body>
+</html>
